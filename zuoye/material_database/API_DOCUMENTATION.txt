@@ -1,0 +1,527 @@
+# 动态材料数据库系统 - API文档
+
+## 概述
+
+本文档描述了动态材料数据库系统的所有API接口。所有API都遵循RESTful设计原则，使用JSON格式进行数据交换。
+
+## 基础信息
+
+- **基础URL**: `http://localhost:5000`
+- **认证方式**: 会话Cookie（登录后自动获得）
+- **响应格式**: JSON
+- **字符编码**: UTF-8
+
+## 认证
+
+所有API请求都需要用户登录。登录后，系统会自动在Cookie中存储会话信息。
+
+### 登录
+```
+POST /api/auth/login
+Content-Type: application/json
+
+{
+    "username": "admin",
+    "password": "admin123"
+}
+
+响应:
+{
+    "success": true,
+    "user": {
+        "id": 1,
+        "username": "admin",
+        "email": "admin@example.com",
+        "user_type": "super_admin"
+    }
+}
+```
+
+### 注册
+```
+POST /api/auth/register
+Content-Type: application/json
+
+{
+    "username": "newuser",
+    "email": "user@example.com",
+    "password": "password123"
+}
+
+响应:
+{
+    "success": true,
+    "user": {
+        "id": 2,
+        "username": "newuser",
+        "email": "user@example.com",
+        "user_type": "normal"
+    }
+}
+```
+
+## 数据源API
+
+### 获取数据源列表
+```
+GET /api/data-sources
+
+响应:
+{
+    "data_sources": [
+        {
+            "id": 1,
+            "name": "金属材料性能数据",
+            "description": "包含常用金属材料的力学性能测试数据",
+            "source_file": "materials.xlsx",
+            "created_at": "2024-01-15T10:30:00"
+        }
+    ]
+}
+```
+
+### 创建数据源
+```
+POST /api/data-sources
+Content-Type: application/json
+
+{
+    "name": "新数据源",
+    "description": "数据源描述"
+}
+
+响应:
+{
+    "success": true,
+    "data_source": {
+        "id": 2,
+        "name": "新数据源",
+        "description": "数据源描述"
+    }
+}
+```
+
+### 获取数据源详情
+```
+GET /api/data-sources/{id}/statistics
+
+响应:
+{
+    "id": 1,
+    "name": "金属材料性能数据",
+    "source_file": "materials.xlsx",
+    "description": "包含常用金属材料的力学性能测试数据",
+    "created_by_id": 1,
+    "created_at": "2024-01-15T10:30:00",
+    "updated_at": "2024-03-20T14:45:00",
+    "tables_count": 3,
+    "tables": [
+        {
+            "id": 1,
+            "table_name": "tbl_materials",
+            "display_name": "材料数据",
+            "data_source_id": 1,
+            "description": "从Excel导入: 材料数据",
+            "record_count": 150
+        }
+    ],
+    "recent_imports": [
+        {
+            "id": 1,
+            "file_name": "materials.xlsx",
+            "sheet_name": "材料数据",
+            "rows_imported": 150,
+            "status": "success",
+            "imported_at": "2024-03-20T14:45:00"
+        }
+    ]
+}
+```
+
+### 获取数据源下的表列表
+```
+GET /api/data-sources/{id}/tables
+
+响应:
+{
+    "tables": [
+        {
+            "id": 1,
+            "table_name": "tbl_materials",
+            "display_name": "材料数据",
+            "data_source_id": 1,
+            "description": "从Excel导入: 材料数据",
+            "record_count": 150
+        }
+    ]
+}
+```
+
+## 数据表API
+
+### 获取表信息
+```
+GET /api/tables/{table_id}
+
+响应:
+{
+    "id": 1,
+    "table_name": "tbl_materials",
+    "display_name": "材料数据",
+    "data_source_id": 1,
+    "description": "从Excel导入: 材料数据",
+    "columns": [
+        {
+            "id": 1,
+            "name": "material_name",
+            "display_name": "材料名称",
+            "data_type": "TEXT",
+            "column_order": 0,
+            "is_required": false,
+            "description": "原始列名: 材料名称"
+        }
+    ],
+    "created_at": "2024-01-15T10:30:00",
+    "updated_at": "2024-03-20T14:45:00"
+}
+```
+
+### 获取表头信息
+```
+GET /api/tables/{table_id}/headers
+
+响应:
+{
+    "headers": [
+        {
+            "id": 1,
+            "name": "material_name",
+            "display_name": "材料名称",
+            "data_type": "TEXT",
+            "order": 0
+        }
+    ]
+}
+```
+
+### 查询表数据
+```
+GET /api/tables/{table_id}/data?page=1&page_size=20&sort_column=name&sort_direction=asc
+
+查询参数:
+- page: 页码（默认1）
+- page_size: 每页记录数（默认20）
+- sort_column: 排序列名
+- sort_direction: 排序方向（asc/desc）
+- filter_{column_name}: 过滤条件
+
+响应:
+{
+    "table_id": 1,
+    "table_name": "tbl_materials",
+    "display_name": "材料数据",
+    "columns": [...],
+    "data": [
+        {
+            "_id": 1,
+            "_import_batch": "abc12345",
+            "material_name": "铝合金",
+            "density": 2.7,
+            "melting_point": 933
+        }
+    ],
+    "pagination": {
+        "page": 1,
+        "page_size": 20,
+        "total_count": 150,
+        "total_pages": 8
+    },
+    "filters_applied": {},
+    "sort_applied": null
+}
+```
+
+### 导出表数据
+```
+GET /api/tables/{table_id}/data?export=csv
+GET /api/tables/{table_id}/data?export=xlsx
+
+支持的格式:
+- csv: 逗号分隔值格式
+- xlsx: Excel格式
+
+响应: 文件下载
+```
+
+### 获取表统计信息
+```
+GET /api/tables/{table_id}/statistics
+
+响应:
+{
+    "table_id": 1,
+    "table_name": "tbl_materials",
+    "display_name": "材料数据",
+    "record_count": 150,
+    "column_count": 5,
+    "created_at": "2024-01-15T10:30:00",
+    "updated_at": "2024-03-20T14:45:00"
+}
+```
+
+## 导入API
+
+### 导入Excel文件
+```
+POST /api/import
+Content-Type: multipart/form-data
+
+参数:
+- file: Excel文件（.xlsx 或 .xls）
+- data_source_id: 目标数据源ID
+
+响应:
+{
+    "success": true,
+    "result": {
+        "file_path": "uploads/1_abc12345_materials.xlsx",
+        "sheets_imported": 1,
+        "total_records": 150,
+        "details": [
+            {
+                "sheet_name": "材料数据",
+                "table_name": "tbl_materials",
+                "rows_imported": 150,
+                "status": "success"
+            }
+        ]
+    }
+}
+```
+
+### 获取导入历史
+```
+GET /api/import-history?data_source_id=1&limit=20
+
+查询参数:
+- data_source_id: 数据源ID（可选）
+- limit: 返回记录数（默认20）
+
+响应:
+{
+    "import_history": [
+        {
+            "id": 1,
+            "data_source_id": 1,
+            "file_name": "materials.xlsx",
+            "sheet_name": "材料数据",
+            "rows_imported": 150,
+            "status": "success",
+            "error_message": null,
+            "imported_by_id": 1,
+            "imported_at": "2024-03-20T14:45:00"
+        }
+    ]
+}
+```
+
+## 权限API
+
+### 获取权限列表
+```
+GET /api/permissions/{data_source_id}
+
+响应:
+{
+    "permissions": [
+        {
+            "id": 1,
+            "user_id": 2,
+            "username": "user1",
+            "can_view_header": true,
+            "can_query": true,
+            "can_import": false,
+            "can_edit_schema": false
+        }
+    ]
+}
+```
+
+### 授予权限
+```
+POST /api/permissions/{data_source_id}
+Content-Type: application/json
+
+{
+    "user_id": 2,
+    "can_view_header": true,
+    "can_query": true,
+    "can_import": true,
+    "can_edit_schema": false
+}
+
+响应:
+{
+    "success": true,
+    "permission_id": 1,
+    "updated": false
+}
+```
+
+### 撤销权限
+```
+DELETE /api/permissions/{data_source_id}/{user_id}
+
+响应:
+{
+    "success": true
+}
+```
+
+## 用户API
+
+### 获取用户列表
+```
+GET /api/users
+
+响应:
+{
+    "users": [
+        {
+            "id": 1,
+            "username": "admin",
+            "email": "admin@example.com",
+            "user_type": "super_admin",
+            "is_active": true,
+            "created_at": "2024-01-15T10:30:00"
+        }
+    ]
+}
+```
+
+### 创建用户
+```
+POST /api/users
+Content-Type: application/json
+
+{
+    "username": "newuser",
+    "email": "user@example.com",
+    "password": "password123",
+    "user_type": "normal"
+}
+
+响应:
+{
+    "success": true,
+    "user": {
+        "id": 2,
+        "username": "newuser",
+        "email": "user@example.com",
+        "user_type": "normal"
+    }
+}
+```
+
+## 系统API
+
+### 获取系统统计信息
+```
+GET /api/system/statistics
+
+响应:
+{
+    "data_sources": 5,
+    "tables": 12,
+    "records": 5000,
+    "users": 10,
+    "table_distribution": [
+        {
+            "table_name": "tbl_materials",
+            "display_name": "材料数据",
+            "table_id": 1,
+            "count": 150
+        }
+    ]
+}
+```
+
+## 错误处理
+
+所有API错误都返回JSON格式的错误信息：
+
+```json
+{
+    "error": "错误描述信息",
+    "success": false
+}
+```
+
+常见HTTP状态码：
+- 200: 请求成功
+- 400: 请求参数错误
+- 401: 未授权（需要登录）
+- 403: 禁止访问（权限不足）
+- 404: 资源不存在
+- 500: 服务器内部错误
+
+## 使用示例
+
+### Python示例
+```python
+import requests
+import json
+
+# 登录
+session = requests.Session()
+login_response = session.post('http://localhost:5000/api/auth/login', json={
+    'username': 'admin',
+    'password': 'admin123'
+})
+
+# 获取数据源列表
+response = session.get('http://localhost:5000/api/data-sources')
+data_sources = response.json()['data_sources']
+
+# 查询表数据
+table_id = data_sources[0]['id']
+response = session.get(f'http://localhost:5000/api/tables/{table_id}/data', params={
+    'page': 1,
+    'page_size': 20
+})
+data = response.json()
+
+print(json.dumps(data, indent=2, ensure_ascii=False))
+```
+
+### JavaScript示例
+```javascript
+// 登录
+fetch('/api/auth/login', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({username: 'admin', password: 'admin123'})
+})
+.then(r => r.json())
+.then(data => console.log(data));
+
+// 获取数据源列表
+fetch('/api/data-sources')
+    .then(r => r.json())
+    .then(data => console.log(data.data_sources));
+
+// 查询表数据
+fetch('/api/tables/1/data?page=1&page_size=20')
+    .then(r => r.json())
+    .then(data => console.log(data));
+```
+
+## 速率限制
+
+当前版本没有实现速率限制，但建议在生产环境中添加。
+
+## 版本信息
+
+- API版本: 1.0
+- 最后更新: 2024年3月
+- 支持的Python版本: 3.8+

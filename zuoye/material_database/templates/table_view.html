@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ table.display_name }} - 动态材料数据库系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+        }
+        
+        .page-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            color: white;
+            padding: 20px 25px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+        }
+        
+        .table th {
+            background: var(--primary-color);
+            color: white;
+            font-weight: 600;
+            border: none;
+            white-space: nowrap;
+        }
+        
+        .table td {
+            vertical-align: middle;
+        }
+        
+        .filter-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+        }
+        
+        .btn-primary {
+            background: var(--accent-color);
+            border: none;
+            border-radius: 8px;
+        }
+        
+        .pagination-info {
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    {% extends "base.html" %}
+    
+    {% block content %}
+    <div class="page-header d-flex justify-content-between align-items-center">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1 p-0" style="background: transparent;">
+                    <li class="breadcrumb-item"><a href="/" class="text-white">首页</a></li>
+                    <li class="breadcrumb-item"><a href="/data-sources" class="text-white">数据源</a></li>
+                    <li class="breadcrumb-item active text-white-50">{{ table.display_name }}</li>
+                </ol>
+            </nav>
+            <h4>📋 {{ table.display_name }}</h4>
+            <p class="mb-0 opacity-75">表名: {{ table.table_name }}</p>
+        </div>
+        <div>
+            <button class="btn btn-light me-2" onclick="exportData()">
+                📤 导出数据
+            </button>
+            <a href="/data-sources" class="btn btn-outline-light">
+                返回列表
+            </a>
+        </div>
+    </div>
+    
+    <!-- 过滤面板 -->
+    <div class="filter-panel">
+        <h6 class="mb-3">🔍 过滤条件</h6>
+        <form id="filterForm" class="row g-3">
+            {% for col in table.columns %}
+            <div class="col-md-3">
+                <label class="form-label">{{ col.display_name }}</label>
+                <input type="text" class="form-control form-control-sm" 
+                       id="filter_{{ col.name }}" 
+                       name="{{ col.name }}"
+                       placeholder="输入过滤值">
+            </div>
+            {% endfor %}
+            <div class="col-md-12">
+                <button type="button" class="btn btn-primary btn-sm" onclick="applyFilters()">
+                    应用过滤
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearFilters()">
+                    清除过滤
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- 数据表格 -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover" id="dataTable" style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            {% for col in table.columns %}
+                            <th>{{ col.display_name }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    {% endblock %}
+    
+    {% block scripts %}
+    <script>
+    let table = null;
+    
+    $(document).ready(function() {
+        initializeTable();
+    });
+    
+    function initializeTable() {
+        table = $('#dataTable').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: '/api/tables/{{ table.id }}/data',
+                type: 'GET',
+                data: function(d) {
+                    d.page = Math.ceil(d.start / d.length) + 1;
+                    d.page_size = d.length;
+                    
+                    // 添加过滤条件
+                    $('#filterForm input').each(function() {
+                        if ($(this).val()) {
+                            d['filter_' + $(this).attr('name')] = $(this).val();
+                        }
+                    });
+                    
+                    // 添加排序
+                    if (d.order && d.order.length > 0) {
+                        d.sort_column = table.columns().header()[d.order[0].column + 1].textContent;
+                        d.sort_direction = d.order[0].dir;
+                    }
+                    
+                    return d;
+                },
+                dataSrc: function(json) {
+                    return json.data;
+                }
+            },
+            columns: [
+                { 
+                    data: '_id',
+                    width: '60px',
+                    orderable: false
+                },
+                {% for col in table.columns %}
+                {
+                    data: '{{ col.name }}',
+                    orderable: true
+                }{% if not loop.last %},{% endif %}
+                {% endfor %}
+            ],
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/zh-Hans.json',
+                processing: '处理中...',
+                search: '搜索',
+                lengthMenu: '每页显示 _MENU_ 条',
+                info: '显示第 _START_ 到 _END_ 条，共 _TOTAL_ 条',
+                infoEmpty: '无数据',
+                infoFiltered: '(从 _MAX_ 条数据中过滤)',
+                loadingRecords: '加载中...',
+                zeroRecords: '没有匹配的数据',
+                paginate: {
+                    first: '首页',
+                    last: '末页',
+                    next: '下一页',
+                    previous: '上一页'
+                }
+            },
+            pageLength: 20,
+            lengthMenu: [10, 20, 50, 100],
+            searching: false,
+            ordering: true,
+            order: [[0, 'desc']],
+            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>'
+        });
+    }
+    
+    function applyFilters() {
+        table.ajax.reload();
+    }
+    
+    function clearFilters() {
+        $('#filterForm input').val('');
+        table.ajax.reload();
+    }
+    
+    function exportData() {
+        const params = new URLSearchParams();
+        $('#filterForm input').each(function() {
+            if ($(this).val()) {
+                params.append('filter_' + $(this).attr('name'), $(this).val());
+            }
+        });
+        
+        window.open('/api/tables/{{ table.id }}/data?export=csv&' + params.toString(), '_blank');
+    }
+    </script>
+    {% endblock %}
+</body>
+</html>

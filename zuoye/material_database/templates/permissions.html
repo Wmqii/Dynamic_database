@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>权限管理 - 动态材料数据库系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+        }
+        
+        .page-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            color: white;
+            padding: 25px 30px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+        }
+        
+        .card-header {
+            background: var(--primary-color);
+            color: white;
+            border-radius: 12px 12px 0 0 !important;
+        }
+        
+        .table th {
+            background: var(--primary-color);
+            color: white;
+            font-weight: 600;
+            border: none;
+        }
+        
+        .permission-row {
+            transition: background-color 0.2s;
+        }
+        
+        .permission-row:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .form-switch .form-check-input {
+            width: 3em;
+            height: 1.5em;
+            cursor: pointer;
+        }
+        
+        .form-switch .form-check-input:checked {
+            background-color: #27ae60;
+            border-color: #27ae60;
+        }
+    </style>
+</head>
+<body>
+    {% extends "base.html" %}
+    
+    {% block content %}
+    <div class="page-header">
+        <nav aria-label="breadcrumb" style="background: transparent;">
+            <ol class="breadcrumb mb-2 p-0">
+                <li class="breadcrumb-item"><a href="/admin" class="text-white">系统管理</a></li>
+                <li class="breadcrumb-item active text-white-50">权限管理</li>
+            </ol>
+        </nav>
+        <h3>🔐 权限管理</h3>
+        <p class="mb-0 opacity-75">数据源: {{ data_source.name }}</p>
+    </div>
+    
+    <!-- 当前权限列表 -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>当前权限分配</span>
+            <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#addPermissionModal">
+                ➕ 添加权限
+            </button>
+        </div>
+        <div class="card-body">
+            {% if permissions %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>用户</th>
+                            <th class="text-center">查看表头</th>
+                            <th class="text-center">查询数据</th>
+                            <th class="text-center">导入数据</th>
+                            <th class="text-center">修改表结构</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for perm in permissions %}
+                        <tr class="permission-row">
+                            <td>
+                                <strong>{{ perm.username }}</strong>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-{{ 'success' if perm.can_view_header else 'secondary' }}">
+                                    {{ '✓' if perm.can_view_header else '✗' }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-{{ 'success' if perm.can_query else 'secondary' }}">
+                                    {{ '✓' if perm.can_query else '✗' }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-{{ 'success' if perm.can_import else 'secondary' }}">
+                                    {{ '✓' if perm.can_import else '✗' }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-{{ 'success' if perm.can_edit_schema else 'secondary' }}">
+                                    {{ '✓' if perm.can_edit_schema else '✗' }}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" 
+                                        onclick="editPermission({{ perm.id }}, {{ perm.user_id }})">
+                                    编辑
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" 
+                                        onclick="revokePermission({{ perm.user_id }})">
+                                    撤销
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5 text-muted">
+                <div style="font-size: 3em;">🔒</div>
+                <p>暂无权限分配</p>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPermissionModal">
+                    添加第一个权限
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- 权限说明 -->
+    <div class="card">
+        <div class="card-header">
+            📖 权限说明
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="d-flex align-items-start">
+                        <span class="badge bg-success me-2 mt-1">✓</span>
+                        <div>
+                            <strong>查看表头</strong>
+                            <p class="text-muted small mb-0">允许用户查看数据表的字段信息</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="d-flex align-items-start">
+                        <span class="badge bg-success me-2 mt-1">✓</span>
+                        <div>
+                            <strong>查询数据</strong>
+                            <p class="text-muted small mb-0">允许用户检索和浏览表内数据</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="d-flex align-items-start">
+                        <span class="badge bg-success me-2 mt-1">✓</span>
+                        <div>
+                            <strong>导入数据</strong>
+                            <p class="text-muted small mb-0">允许用户向该数据源导入新数据</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="d-flex align-items-start">
+                        <span class="badge bg-success me-2 mt-1">✓</span>
+                        <div>
+                            <strong>修改表结构</strong>
+                            <p class="text-muted small mb-0">允许用户修改表的字段定义</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 添加权限模态框 -->
+    <div class="modal fade" id="addPermissionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">➕ 添加权限</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="permissionForm">
+                        <input type="hidden" name="data_source_id" value="{{ data_source.id }}">
+                        <div class="mb-3">
+                            <label class="form-label">选择用户</label>
+                            <select class="form-select" name="user_id" required>
+                                <option value="">-- 选择用户 --</option>
+                                {% for u in users %}
+                                <option value="{{ u.id }}">{{ u.username }} ({{ u.user_type }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">权限设置</label>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" name="can_view_header" checked>
+                                <label class="form-check-label">查看表头</label>
+                            </div>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" name="can_query" checked>
+                                <label class="form-check-label">查询数据</label>
+                            </div>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" name="can_import">
+                                <label class="form-check-label">导入数据</label>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="can_edit_schema">
+                                <label class="form-check-label">修改表结构</label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="grantPermission()">授予权限</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 编辑权限模态框 -->
+    <div class="modal fade" id="editPermissionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">✏️ 编辑权限</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editPermissionForm">
+                        <input type="hidden" name="user_id" id="editPermUserId">
+                        <div class="mb-3">
+                            <label class="form-label">权限设置</label>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" name="can_view_header" id="editCanViewHeader">
+                                <label class="form-check-label">查看表头</label>
+                            </div>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" name="can_query" id="editCanQuery">
+                                <label class="form-check-label">查询数据</label>
+                            </div>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" name="can_import" id="editCanImport">
+                                <label class="form-check-label">导入数据</label>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="can_edit_schema" id="editCanEditSchema">
+                                <label class="form-check-label">修改表结构</label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="updatePermission()">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% endblock %}
+    
+    {% block scripts %}
+    <script>
+    function grantPermission() {
+        const form = document.getElementById('permissionForm');
+        const formData = new FormData(form);
+        
+        fetch('/api/permissions/{{ data_source.id }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(Object.fromEntries(formData))
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('操作失败: ' + data.error);
+            }
+        });
+    }
+    
+    function editPermission(permissionId, userId) {
+        fetch(`/api/permissions/{{ data_source.id }}/user/${userId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.permission) {
+                    document.getElementById('editPermUserId').value = userId;
+                    document.getElementById('editCanViewHeader').checked = data.permission.can_view_header;
+                    document.getElementById('editCanQuery').checked = data.permission.can_query;
+                    document.getElementById('editCanImport').checked = data.permission.can_import;
+                    document.getElementById('editCanEditSchema').checked = data.permission.can_edit_schema;
+                    
+                    const modal = new bootstrap.Modal(document.getElementById('editPermissionModal'));
+                    modal.show();
+                }
+            });
+    }
+    
+    function updatePermission() {
+        const userId = document.getElementById('editPermUserId').value;
+        const form = document.getElementById('editPermissionForm');
+        const formData = new FormData(form);
+        
+        fetch(`/api/permissions/{{ data_source.id }}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(Object.fromEntries(formData))
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('更新失败: ' + data.error);
+            }
+        });
+    }
+    
+    function revokePermission(userId) {
+        if (confirm('确定要撤销该用户的权限吗？')) {
+            fetch(`/api/permissions/{{ data_source.id }}/${userId}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('撤销失败: ' + data.error);
+                }
+            });
+        }
+    }
+    </script>
+    {% endblock %}
+</body>
+</html>

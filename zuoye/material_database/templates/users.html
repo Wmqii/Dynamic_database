@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户管理 - 动态材料数据库系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+        }
+        
+        .page-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            color: white;
+            padding: 25px 30px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+        }
+        
+        .card-header {
+            background: var(--primary-color);
+            color: white;
+            border-radius: 12px 12px 0 0 !important;
+        }
+        
+        .table th {
+            background: var(--primary-color);
+            color: white;
+            font-weight: 600;
+            border: none;
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    {% extends "base.html" %}
+    
+    {% block content %}
+    <div class="page-header d-flex justify-content-between align-items-center">
+        <div>
+            <h3>👥 用户管理</h3>
+            <p class="mb-0 opacity-75">管理系统用户账户</p>
+        </div>
+        <button class="btn btn-light" data-bs-toggle="modal" data-bs-target="#createUserModal">
+            ➕ 添加用户
+        </button>
+    </div>
+    
+    <!-- 用户列表 -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>用户列表</span>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover" id="usersTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">ID</th>
+                            <th style="width: 60px;"></th>
+                            <th>用户名</th>
+                            <th>邮箱</th>
+                            <th>用户类型</th>
+                            <th>状态</th>
+                            <th>创建时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in users %}
+                        <tr>
+                            <td>{{ u.id }}</td>
+                            <td>
+                                <div class="user-avatar">{{ u.username[0].upper() }}</div>
+                            </td>
+                            <td><strong>{{ u.username }}</strong></td>
+                            <td>{{ u.email or '-' }}</td>
+                            <td>
+                                {% if u.user_type == 'super_admin' %}
+                                <span class="badge bg-danger">超级管理员</span>
+                                {% elif u.user_type == 'admin' %}
+                                <span class="badge bg-warning">管理员</span>
+                                {% else %}
+                                <span class="badge bg-info">普通用户</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if u.is_active %}
+                                <span class="badge bg-success">启用</span>
+                                {% else %}
+                                <span class="badge bg-secondary">禁用</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ u.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary" 
+                                            onclick="editUser({{ u.id }})">
+                                        编辑
+                                    </button>
+                                    {% if u.id != user.id %}
+                                    <button class="btn btn-outline-danger" 
+                                            onclick="deleteUser({{ u.id }})">
+                                        删除
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 创建用户模态框 -->
+    <div class="modal fade" id="createUserModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">➕ 添加用户</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createUserForm">
+                        <div class="mb-3">
+                            <label class="form-label">用户名</label>
+                            <input type="text" class="form-control" name="username" required 
+                                   minlength="3" placeholder="输入用户名">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">密码</label>
+                            <input type="password" class="form-control" name="password" required 
+                                   minlength="6" placeholder="输入密码">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">邮箱（可选）</label>
+                            <input type="email" class="form-control" name="email" placeholder="输入邮箱">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">用户类型</label>
+                            <select class="form-select" name="user_type">
+                                <option value="normal">普通用户</option>
+                                <option value="admin">管理员</option>
+                                <option value="super_admin">超级管理员</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="createUser()">创建</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 编辑用户模态框 -->
+    <div class="modal fade" id="editUserModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">✏️ 编辑用户</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editUserForm">
+                        <input type="hidden" name="user_id" id="editUserId">
+                        <div class="mb-3">
+                            <label class="form-label">用户名</label>
+                            <input type="text" class="form-control" id="editUsername" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">新密码（留空则不修改）</label>
+                            <input type="password" class="form-control" name="password" 
+                                   placeholder="输入新密码">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">邮箱</label>
+                            <input type="email" class="form-control" id="editEmail" name="email">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">用户类型</label>
+                            <select class="form-select" id="editUserType" name="user_type">
+                                <option value="normal">普通用户</option>
+                                <option value="admin">管理员</option>
+                                <option value="super_admin">超级管理员</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">状态</label>
+                            <select class="form-select" id="editIsActive" name="is_active">
+                                <option value="true">启用</option>
+                                <option value="false">禁用</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="updateUser()">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% endblock %}
+    
+    {% block scripts %}
+    <script>
+    $(document).ready(function() {
+        $('#usersTable').DataTable({
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/zh-Hans.json'
+            }
+        });
+    });
+    
+    function createUser() {
+        const form = document.getElementById('createUserForm');
+        const formData = new FormData(form);
+        
+        fetch('/api/users', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(Object.fromEntries(formData))
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('创建失败: ' + data.error);
+            }
+        });
+    }
+    
+    function editUser(userId) {
+        fetch(`/api/users/${userId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.user) {
+                    document.getElementById('editUserId').value = data.user.id;
+                    document.getElementById('editUsername').value = data.user.username;
+                    document.getElementById('editEmail').value = data.user.email || '';
+                    document.getElementById('editUserType').value = data.user.user_type;
+                    document.getElementById('editIsActive').value = data.user.is_active.toString();
+                    
+                    const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
+                    modal.show();
+                }
+            });
+    }
+    
+    function updateUser() {
+        const userId = document.getElementById('editUserId').value;
+        const form = document.getElementById('editUserForm');
+        const formData = new FormData(form);
+        
+        fetch(`/api/users/${userId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(Object.fromEntries(formData))
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('更新失败: ' + data.error);
+            }
+        });
+    }
+    
+    function deleteUser(userId) {
+        if (confirm('确定要删除这个用户吗？此操作不可恢复。')) {
+            fetch(`/api/users/${userId}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('删除失败: ' + data.error);
+                }
+            });
+        }
+    }
+    </script>
+    {% endblock %}
+</body>
+</html>

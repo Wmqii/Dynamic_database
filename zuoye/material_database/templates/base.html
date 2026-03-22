@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>动态材料数据库系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #34495e;
+            --accent-color: #3498db;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --light-bg: #f8f9fa;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--light-bg);
+        }
+        
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(180deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+        
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 12px 20px;
+            margin: 4px 10px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar .nav-link:hover {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            transform: translateX(5px);
+        }
+        
+        .sidebar .nav-link.active {
+            background: var(--accent-color);
+            color: white;
+        }
+        
+        .main-content {
+            padding: 20px;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+        }
+        
+        .stat-card {
+            padding: 20px;
+            border-radius: 12px;
+            color: white;
+        }
+        
+        .stat-card.primary { background: linear-gradient(135deg, #3498db, #2980b9); }
+        .stat-card.success { background: linear-gradient(135deg, #27ae60, #229954); }
+        .stat-card.warning { background: linear-gradient(135deg, #f39c12, #d68910); }
+        .stat-card.danger { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+        
+        .stat-card h3 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .stat-card p {
+            margin: 0;
+            opacity: 0.9;
+        }
+        
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+        }
+        
+        .dataTables_wrapper {
+            padding: 20px 0;
+        }
+        
+        .btn-primary {
+            background: var(--accent-color);
+            border: none;
+            padding: 10px 25px;
+            border-radius: 8px;
+        }
+        
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+        
+        .page-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+        }
+        
+        .user-info {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .table th {
+            background: var(--primary-color);
+            color: white;
+            font-weight: 600;
+            border: none;
+        }
+        
+        .table td {
+            vertical-align: middle;
+        }
+        
+        .badge-role {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+        }
+        
+        .modal-header {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        .form-control:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+        }
+        
+        .alert {
+            border-radius: 10px;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- 侧边栏 -->
+            <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse show" id="sidebarMenu">
+                <div class="position-sticky pt-3">
+                    <div class="text-center mb-4">
+                        <h4>📦 材料数据库</h4>
+                        <small>Dynamic Material Database</small>
+                    </div>
+                    
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/">
+                                <span class="me-2">🏠</span> 首页
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/data-sources">
+                                <span class="me-2">📁</span> 数据源管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/admin">
+                                <span class="me-2">⚙️</span> 系统管理
+                            </a>
+                        </li>
+                        {% if user and user.user_type == 'super_admin' %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="/admin/users">
+                                <span class="me-2">👥</span> 用户管理
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                    
+                    <hr>
+                    
+                    {% if user %}
+                    <div class="user-info">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-primary rounded-circle p-2 me-2">
+                                <span class="text-white">{{ user.username[0].upper() }}</span>
+                            </div>
+                            <div>
+                                <strong>{{ user.username }}</strong>
+                                <br>
+                                <small class="text-muted">
+                                    {% if user.user_type == 'super_admin' %}
+                                    <span class="badge bg-danger">超级管理员</span>
+                                    {% elif user.user_type == 'admin' %}
+                                    <span class="badge bg-warning">管理员</span>
+                                    {% else %}
+                                    <span class="badge bg-info">普通用户</span>
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <a href="/logout" class="btn btn-outline-secondary btn-sm w-100">退出登录</a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </nav>
+            
+            <!-- 主内容区 -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

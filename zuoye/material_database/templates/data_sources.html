@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据源管理 - 动态材料数据库系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+        }
+        
+        .page-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            color: white;
+            padding: 25px 30px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+        }
+        
+        .card-header {
+            background: var(--primary-color);
+            color: white;
+            border-radius: 12px 12px 0 0 !important;
+            padding: 15px 20px;
+        }
+        
+        .table th {
+            background: var(--primary-color);
+            color: white;
+            font-weight: 600;
+            border: none;
+        }
+        
+        .btn-primary {
+            background: var(--accent-color);
+            border: none;
+            border-radius: 8px;
+        }
+        
+        .source-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .source-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
+        .source-icon {
+            font-size: 3em;
+            color: var(--accent-color);
+        }
+    </style>
+</head>
+<body>
+    {% extends "base.html" %}
+    
+    {% block content %}
+    <div class="page-header d-flex justify-content-between align-items-center">
+        <div>
+            <h3>📁 数据源管理</h3>
+            <p class="mb-0 opacity-75">管理您的Excel数据源和导入的数据</p>
+        </div>
+        <button class="btn btn-light" data-bs-toggle="modal" data-bs-target="#createSourceModal">
+            ➕ 新建数据源
+        </button>
+    </div>
+    
+    <!-- 数据源列表 -->
+    <div class="row" id="dataSourcesList">
+        {% if data_sources %}
+            {% for source in data_sources %}
+            <div class="col-md-4 mb-4">
+                <div class="card source-card h-100" onclick="viewSourceTables({{ source.id }})">
+                    <div class="card-body text-center">
+                        <div class="source-icon mb-3">📊</div>
+                        <h5 class="card-title">{{ source.name }}</h5>
+                        <p class="card-text text-muted">
+                            {{ source.description or '暂无描述' }}
+                        </p>
+                        <span class="badge bg-primary">
+                            创建于 {{ source.created_at.strftime('%Y-%m-%d') }}
+                        </span>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <button class="btn btn-sm btn-outline-primary w-100" 
+                                onclick="event.stopPropagation(); importToSource({{ source.id }}, &quot;{{ source.name }}&quot;)">
+                            📥 导入数据
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <div class="text-muted mb-3" style="font-size: 4em;">📭</div>
+                    <h5 class="text-muted">暂无数据源</h5>
+                    <p class="text-muted">点击右上角按钮创建第一个数据源</p>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createSourceModal">
+                        ➕ 创建数据源
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- 数据表展示区域 -->
+    <div class="row mt-4" id="tablesArea" style="display: none;">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span id="tablesHeader">数据表列表</span>
+                    <button class="btn btn-sm btn-light" onclick="hideTables()">收起</button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="tablesTable">
+                            <thead>
+                                <tr>
+                                    <th>表名</th>
+                                    <th>显示名称</th>
+                                    <th>记录数</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablesBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 新建数据源模态框 -->
+    <div class="modal fade" id="createSourceModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">➕ 新建数据源</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createSourceForm">
+                        <div class="mb-3">
+                            <label class="form-label">数据源名称</label>
+                            <input type="text" class="form-control" name="name" required 
+                                   placeholder="输入数据源名称">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">描述（可选）</label>
+                            <textarea class="form-control" name="description" rows="3" 
+                                      placeholder="输入数据源描述"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="createSource()">创建</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 导入数据模态框 -->
+    <div class="modal fade" id="importModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">📥 导入Excel数据</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted mb-3">导入到数据源: <strong id="importSourceName"></strong></p>
+                    <form id="importForm" enctype="multipart/form-data">
+                        <input type="hidden" name="data_source_id" id="importSourceId">
+                        <div class="mb-3">
+                            <label class="form-label">选择Excel文件</label>
+                            <input type="file" class="form-control" name="file" accept=".xlsx,.xls" required>
+                            <small class="text-muted">支持 .xlsx 和 .xls 格式</small>
+                        </div>
+                    </form>
+                    <div id="importResult"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="performImport()">开始导入</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% endblock %}
+    
+    {% block scripts %}
+    <script>
+    let currentSourceId = null;
+    
+    function viewSourceTables(sourceId) {
+        fetch(`/api/data-sources/${sourceId}/tables`)
+            .then(response => response.json())
+            .then(data => {
+                const tbody = document.getElementById('tablesBody');
+                tbody.innerHTML = '';
+                
+                if (data.tables.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">该数据源下暂无数据表</td></tr>';
+                } else {
+                    data.tables.forEach(table => {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${table.table_name}</td>
+                                <td>${table.display_name}</td>
+                                <td>${table.record_count}</td>
+                                <td>
+                                    <a href="/table/${table.id}" class="btn btn-sm btn-primary">
+                                        查看数据
+                                    </a>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                }
+                
+                document.getElementById('tablesHeader').textContent = `数据表列表 (${data.tables.length}个)`;
+                document.getElementById('tablesArea').style.display = 'block';
+                
+                if (currentSourceId !== sourceId) {
+                    document.getElementById('tablesArea').scrollIntoView({ behavior: 'smooth' });
+                }
+                currentSourceId = sourceId;
+            });
+    }
+    
+    function hideTables() {
+        document.getElementById('tablesArea').style.display = 'none';
+    }
+    
+    function importToSource(sourceId, sourceName) {
+        document.getElementById('importSourceId').value = sourceId;
+        document.getElementById('importSourceName').textContent = sourceName;
+        document.getElementById('importResult').innerHTML = '';
+        const modal = new bootstrap.Modal(document.getElementById('importModal'));
+        modal.show();
+    }
+    
+    function performImport() {
+        const form = document.getElementById('importForm');
+        const formData = new FormData(form);
+        const resultDiv = document.getElementById('importResult');
+        
+        // 验证文件是否选择
+        const fileInput = form.querySelector('input[name="file"]');
+        if (!fileInput.files || fileInput.files.length === 0) {
+            resultDiv.innerHTML = '<div class="alert alert-warning">请先选择Excel文件</div>';
+            return;
+        }
+        
+        resultDiv.innerHTML = '<div class="alert alert-info">正在导入，请稍候...</div>';
+        
+        fetch('/api/import', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || `HTTP ${response.status}`);
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        <strong>导入成功！</strong><br>
+                        处理的子文件数: ${data.result.sheets_imported}<br>
+                        总记录数: ${data.result.total_records}
+                    </div>
+                `;
+                setTimeout(() => location.reload(), 2000);
+            } else {
+                resultDiv.innerHTML = `<div class="alert alert-danger">导入失败: ${data.error}</div>`;
+            }
+        })
+        .catch(error => {
+            resultDiv.innerHTML = `<div class="alert alert-danger">导入出错: ${error.message}</div>`;
+            console.error('导入错误:', error);
+        });
+    }
+    
+    function createSource() {
+        const form = document.getElementById('createSourceForm');
+        const formData = new FormData(form);
+        
+        fetch('/api/data-sources', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(Object.fromEntries(formData))
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('创建失败: ' + data.error);
+            }
+        });
+    }
+    </script>
+    {% endblock %}
+</body>
+</html>

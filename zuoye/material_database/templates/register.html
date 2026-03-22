@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注册 - 动态材料数据库系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--primary-color) 0%, #1a252f 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .register-container {
+            width: 100%;
+            max-width: 450px;
+            padding: 20px;
+        }
+        
+        .register-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .register-header {
+            background: linear-gradient(135deg, #27ae60 0%, #1e8449 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .register-header h2 {
+            margin: 0;
+            font-weight: 700;
+        }
+        
+        .register-header p {
+            margin: 10px 0 0;
+            opacity: 0.9;
+        }
+        
+        .register-body {
+            padding: 30px;
+        }
+        
+        .form-floating {
+            margin-bottom: 15px;
+        }
+        
+        .form-floating input {
+            border-radius: 10px;
+            border: 2px solid #e0e0e0;
+            padding: 12px 15px;
+        }
+        
+        .form-floating input:focus {
+            border-color: #27ae60;
+            box-shadow: 0 0 0 0.2rem rgba(39, 174, 96, 0.25);
+        }
+        
+        .btn-register {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            background: linear-gradient(135deg, #27ae60 0%, #1e8449 100%);
+            border: none;
+        }
+        
+        .btn-register:hover {
+            background: linear-gradient(135deg, #1e8449 0%, #186a3b 100%);
+        }
+        
+        .register-footer {
+            text-align: center;
+            padding: 0 30px 30px;
+        }
+        
+        .register-footer a {
+            color: #27ae60;
+            text-decoration: none;
+        }
+        
+        .alert {
+            border-radius: 10px;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="register-container">
+        <div class="register-card">
+            <div class="register-header">
+                <h2>📝 用户注册</h2>
+                <p>Create New Account</p>
+            </div>
+            <div class="register-body">
+                {% if error %}
+                <div class="alert alert-danger">{{ error }}</div>
+                {% endif %}
+                
+                <form method="POST">
+                    <div class="form-floating">
+                        <input type="text" class="form-control" id="username" name="username" 
+                               placeholder="用户名" required minlength="3">
+                        <label for="username">用户名</label>
+                    </div>
+                    <div class="form-floating">
+                        <input type="email" class="form-control" id="email" name="email" 
+                               placeholder="邮箱地址">
+                        <label for="email">邮箱地址（可选）</label>
+                    </div>
+                    <div class="form-floating">
+                        <input type="password" class="form-control" id="password" name="password" 
+                               placeholder="密码" required minlength="6">
+                        <label for="password">密码</label>
+                    </div>
+                    <div class="form-floating">
+                        <input type="password" class="form-control" id="confirm_password" 
+                               name="confirm_password" placeholder="确认密码" required>
+                        <label for="confirm_password">确认密码</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-register">
+                        注 册
+                    </button>
+                </form>
+            </div>
+            <div class="register-footer">
+                <p>已有账号？<a href="/login">立即登录</a></p>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm_password').value;
+            
+            if (password !== confirmPassword) {
+                e.preventDefault();
+                alert('两次输入的密码不一致！');
+            }
+        });
+    </script>
+</body>
+</html>

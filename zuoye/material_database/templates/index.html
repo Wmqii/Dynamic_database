@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <h2>📊 数据仪表板</h2>
+    <p class="mb-0">欢迎使用动态材料数据库管理系统</p>
+</div>
+
+<!-- 统计卡片 -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stat-card primary">
+            <h3>{{ stats.data_sources }}</h3>
+            <p>数据源数量</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card success">
+            <h3>{{ stats.tables }}</h3>
+            <p>数据表数量</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card warning">
+            <h3>{{ stats.records }}</h3>
+            <p>数据记录数</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card danger">
+            <h3>{{ stats.users }}</h3>
+            <p>系统用户数</p>
+        </div>
+    </div>
+</div>
+
+<!-- 快速操作 -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">⚡ 快速操作</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <button class="btn btn-primary w-100 mb-2" data-bs-toggle="modal" data-bs-target="#importModal">
+                            📥 导入Excel数据
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="/data-sources" class="btn btn-success w-100 mb-2">
+                            📁 管理数据源
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-info w-100 mb-2" onclick="showSearchModal()">
+                            🔍 搜索数据
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="/admin" class="btn btn-warning w-100 mb-2">
+                            ⚙️ 系统管理
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 数据表分布 -->
+{% if stats.table_distribution %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">📈 数据表记录分布</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-container">
+                    <table class="table table-hover" id="distributionTable">
+                        <thead>
+                            <tr>
+                                <th>表名</th>
+                                <th>显示名称</th>
+                                <th>记录数</th>
+                                <th>占比</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for table in stats.table_distribution %}
+                            <tr>
+                                <td>{{ table.table_name }}</td>
+                                <td>{{ table.display_name }}</td>
+                                <td>{{ table.count }}</td>
+                                <td>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar bg-success" role="progressbar" 
+                                             style="width: {{ (table.count / stats.records * 100)|round(1) }}%">
+                                            {{ (table.count / stats.records * 100)|round(1) }}%
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- 导入Excel模态框 -->
+<div class="modal fade" id="importModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">📥 导入Excel数据</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="importForm" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label class="form-label">选择数据源</label>
+                        <select class="form-select" name="data_source_id" id="importDataSource">
+                            <option value="">-- 创建新数据源 --</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="newSourceNameGroup" style="display: none;">
+                        <label class="form-label">新数据源名称</label>
+                        <input type="text" class="form-control" name="data_source_name" placeholder="输入数据源名称">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">选择Excel文件</label>
+                        <input type="file" class="form-control" name="file" accept=".xlsx,.xls" required>
+                        <small class="text-muted">支持 .xlsx 和 .xls 格式</small>
+                    </div>
+                </form>
+                <div id="importResult" class="mt-3"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="importExcel()">开始导入</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 搜索模态框 -->
+<div class="modal fade" id="searchModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">🔍 全文搜索</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" id="searchInput" placeholder="输入搜索关键词...">
+                    <button class="btn btn-primary" type="button" onclick="performSearch()">搜索</button>
+                </div>
+                <div id="searchResults"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    $('#distributionTable').DataTable({
+        language: {
+            url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/zh-Hans.json'
+        },
+        pageLength: 10
+    });
+    
+    loadDataSources();
+    
+    $('#importDataSource').change(function() {
+        if ($(this).val() === '') {
+            $('#newSourceNameGroup').show();
+        } else {
+            $('#newSourceNameGroup').hide();
+        }
+    });
+});
+
+function loadDataSources() {
+    fetch('/api/data-sources')
+        .then(response => response.json())
+        .then(data => {
+            const select = $('#importDataSource');
+            data.data_sources.forEach(ds => {
+                select.append(`<option value="${ds.id}">${ds.name}</option>`);
+            });
+        });
+}
+
+function importExcel() {
+    const form = document.getElementById('importForm');
+    const formData = new FormData(form);
+    const resultDiv = document.getElementById('importResult');
+    
+    resultDiv.innerHTML = '<div class="alert alert-info">正在导入，请稍候...</div>';
+    
+    fetch('/api/import', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <strong>导入成功！</strong><br>
+                    文件: ${data.result.file_path}<br>
+                    处理的子文件数: ${data.result.sheets_imported}<br>
+                    总记录数: ${data.result.total_records}
+                </div>
+            `;
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            resultDiv.innerHTML = `<div class="alert alert-danger">导入失败: ${data.error}</div>`;
+        }
+    })
+    .catch(error => {
+        resultDiv.innerHTML = `<div class="alert alert-danger">导入失败: ${error}</div>`;
+    });
+}
+
+function showSearchModal() {
+    const modal = new bootstrap.Modal(document.getElementById('searchModal'));
+    modal.show();
+}
+
+function performSearch() {
+    const query = document.getElementById('searchInput').value;
+    if (!query.trim()) return;
+    
+    const resultsDiv = document.getElementById('searchResults');
+    resultsDiv.innerHTML = '<div class="text-center">正在搜索...</div>';
+    
+    fetch(`/api/search?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.results.length === 0) {
+                resultsDiv.innerHTML = '<div class="alert alert-warning">未找到相关结果</div>';
+                return;
+            }
+            
+            let html = '<div class="list-group">';
+            data.results.forEach(result => {
+                html += `
+                    <a href="/table/${result.table_id}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">${result.display_name}</h6>
+                            <small>匹配 ${result.matching_records} 条记录</small>
+                        </div>
+                        <small class="text-muted">表名: ${result.table_name}</small>
+                    </a>
+                `;
+            });
+            html += '</div>';
+            resultsDiv.innerHTML = html;
+        });
+}
+</script>
+{% endblock %}

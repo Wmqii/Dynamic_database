@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 - 动态材料数据库系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--primary-color) 0%, #1a252f 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .login-container {
+            width: 100%;
+            max-width: 420px;
+            padding: 20px;
+        }
+        
+        .login-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .login-header {
+            background: linear-gradient(135deg, var(--accent-color) 0%, #2980b9 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        
+        .login-header h2 {
+            margin: 0;
+            font-weight: 700;
+        }
+        
+        .login-header p {
+            margin: 10px 0 0;
+            opacity: 0.9;
+        }
+        
+        .login-body {
+            padding: 40px 30px;
+        }
+        
+        .form-floating {
+            margin-bottom: 20px;
+        }
+        
+        .form-floating input {
+            border-radius: 10px;
+            border: 2px solid #e0e0e0;
+            padding: 15px;
+        }
+        
+        .form-floating input:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+        }
+        
+        .btn-login {
+            width: 100%;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--accent-color) 0%, #2980b9 100%);
+            border: none;
+        }
+        
+        .btn-login:hover {
+            background: linear-gradient(135deg, #2980b9 0%, #1a5276 100%);
+        }
+        
+        .login-footer {
+            text-align: center;
+            padding: 0 30px 30px;
+        }
+        
+        .login-footer a {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+        
+        .login-footer a:hover {
+            text-decoration: underline;
+        }
+        
+        .alert {
+            border-radius: 10px;
+            border: none;
+        }
+        
+        .icon-logo {
+            font-size: 4em;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="icon-logo">📦</div>
+                <h2>材料数据库系统</h2>
+                <p>Dynamic Material Database</p>
+            </div>
+            <div class="login-body">
+                {% if error %}
+                <div class="alert alert-danger">{{ error }}</div>
+                {% endif %}
+                
+                <form method="POST">
+                    <div class="form-floating">
+                        <input type="text" class="form-control" id="username" name="username" 
+                               placeholder="用户名" required>
+                        <label for="username">用户名</label>
+                    </div>
+                    <div class="form-floating">
+                        <input type="password" class="form-control" id="password" name="password" 
+                               placeholder="密码" required>
+                        <label for="password">密码</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-login">
+                        登 录
+                    </button>
+                </form>
+            </div>
+            <div class="login-footer">
+                <p>还没有账号？<a href="/register">立即注册</a></p>
+                <small class="text-muted">
+                    默认管理员: admin / admin123
+                </small>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

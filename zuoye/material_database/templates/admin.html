@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统管理 - 动态材料数据库系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+        }
+        
+        .page-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #1a252f 100%);
+            color: white;
+            padding: 25px 30px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+        }
+        
+        .stat-card {
+            padding: 25px;
+            border-radius: 12px;
+            color: white;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        
+        .stat-card.primary { background: linear-gradient(135deg, #3498db, #2980b9); }
+        .stat-card.success { background: linear-gradient(135deg, #27ae60, #229954); }
+        .stat-card.warning { background: linear-gradient(135deg, #f39c12, #d68910); }
+        .stat-card.info { background: linear-gradient(135deg, #17a2b8, #138496); }
+        
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+        }
+        
+        .card-header {
+            background: var(--primary-color);
+            color: white;
+            border-radius: 12px 12px 0 0 !important;
+        }
+        
+        .table th {
+            background: var(--primary-color);
+            color: white;
+            font-weight: 600;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    {% extends "base.html" %}
+    
+    {% block content %}
+    <div class="page-header">
+        <h3>⚙️ 系统管理</h3>
+        <p class="mb-0 opacity-75">系统配置和用户管理</p>
+    </div>
+    
+    <!-- 统计信息 -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stat-card primary">
+                <h2>{{ stats.data_sources }}</h2>
+                <p class="mb-0">数据源</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card success">
+                <h2>{{ stats.tables }}</h2>
+                <p class="mb-0">数据表</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card warning">
+                <h2>{{ stats.records }}</h2>
+                <p class="mb-0">数据记录</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card info">
+                <h2>{{ stats.users }}</h2>
+                <p class="mb-0">系统用户</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 管理功能 -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>👥 用户管理</span>
+                    <a href="/admin/users" class="btn btn-sm btn-light">管理</a>
+                </div>
+                <div class="card-body">
+                    <p>管理系统用户账户，包括创建、编辑、删除用户以及分配用户类型。</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>🔐 数据源权限</span>
+                </div>
+                <div class="card-body">
+                    <p>为不同用户分配数据源的访问权限，控制谁可以查看和操作数据。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 数据源列表 -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>📊 数据源概览</span>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>名称</th>
+                                    <th>描述</th>
+                                    <th>创建时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for source in data_sources %}
+                                <tr>
+                                    <td>{{ source.id }}</td>
+                                    <td>{{ source.name }}</td>
+                                    <td>{{ source.description or '无' }}</td>
+                                    <td>{{ source.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td>
+                                        <a href="/admin/permissions/{{ source.id }}" class="btn btn-sm btn-primary">
+                                            设置权限
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">暂无数据源</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% endblock %}
+</body>
+</html>
